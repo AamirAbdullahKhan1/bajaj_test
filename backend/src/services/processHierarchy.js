@@ -1,25 +1,8 @@
 const { validateEdge } = require("../utils/validate");
 
-/**
- * Core processing pipeline for the /bfhl endpoint.
- *
- * Steps:
- *   1. Validate & trim each entry
- *   2. Deduplicate edges (first occurrence wins)
- *   3. Apply first‑parent‑wins rule (each child gets at most one parent)
- *   4. Discover connected components (undirected traversal)
- *   5. For each component: find root, detect cycles, build tree, measure depth
- *   6. Assemble summary
- *
- * @param {string[]} data – array of raw edge strings from the request
- * @returns {object} – { hierarchies, invalid_entries, duplicate_edges, summary }
- */
 function processHierarchy(data) {
-  // ------------------------------------------------------------------
-  // 1. VALIDATE
-  // ------------------------------------------------------------------
   const invalidEntries = [];
-  const validParsed = []; // { parent, child, trimmed }
+  const validParsed = [];
 
   for (const raw of data) {
     const result = validateEdge(raw);
@@ -30,12 +13,9 @@ function processHierarchy(data) {
     }
   }
 
-  // ------------------------------------------------------------------
-  // 2. DEDUPLICATE EDGES
-  // ------------------------------------------------------------------
   const seenEdges = new Set();
   const duplicateEdgesSet = new Set();
-  const uniqueEdges = []; // retain insertion order
+  const uniqueEdges = [];
 
   for (const { parent, child, trimmed } of validParsed) {
     const key = `${parent}->${child}`;
@@ -47,26 +27,20 @@ function processHierarchy(data) {
     }
   }
 
-  // ------------------------------------------------------------------
-  // 3. FIRST‑PARENT‑WINS RULE
-  // ------------------------------------------------------------------
-  const childParentMap = new Map(); // child → first parent
-  const retainedEdges = [];         // edges that survive the rule
+  const childParentMap = new Map(); 
+  const retainedEdges = [];         
 
   for (const { parent, child } of uniqueEdges) {
     if (!childParentMap.has(child)) {
       childParentMap.set(child, parent);
       retainedEdges.push({ parent, child });
     }
-    // else: silently discard (multi‑parent, NOT invalid, NOT duplicate)
+    
   }
 
-  // ------------------------------------------------------------------
-  // 4. BUILD DIRECTED ADJACENCY + FIND CONNECTED COMPONENTS
-  // ------------------------------------------------------------------
-  const children = new Map();   // parent → sorted children list (directed)
+  const children = new Map();   
   const allNodes = new Set();
-  const childNodes = new Set(); // nodes that appear as a child
+  const childNodes = new Set(); 
 
   for (const { parent, child } of retainedEdges) {
     allNodes.add(parent);
@@ -77,12 +51,10 @@ function processHierarchy(data) {
     children.get(parent).push(child);
   }
 
-  // Sort children of each parent lexicographically for deterministic output
   for (const [, kids] of children) {
     kids.sort();
   }
 
-  // Undirected adjacency for component discovery
   const undirected = new Map();
   const addUndirected = (a, b) => {
     if (!undirected.has(a)) undirected.set(a, new Set());
@@ -95,15 +67,12 @@ function processHierarchy(data) {
     addUndirected(parent, child);
   }
 
-  // Handle isolated nodes (appear only as parent with no children that link back)
-  // Every node in allNodes should be present in undirected
   for (const node of allNodes) {
     if (!undirected.has(node)) undirected.set(node, new Set());
   }
 
-  // BFS to find connected components
   const visited = new Set();
-  const components = []; // each component is a sorted array of node names
+  const components = []; 
 
   const sortedNodes = [...allNodes].sort();
 
@@ -130,25 +99,18 @@ function processHierarchy(data) {
     components.push(component);
   }
 
-  // ------------------------------------------------------------------
-  // 5. PROCESS EACH COMPONENT
-  // ------------------------------------------------------------------
   const hierarchies = [];
 
   for (const component of components) {
-    // Find roots: nodes in this component that are not children
     const roots = component.filter((n) => !childNodes.has(n));
 
     let root;
     if (roots.length === 0) {
-      // Pure cycle — pick lexicographically smallest
       root = component[0]; // already sorted
     } else {
-      // Pick lexicographically smallest root
       root = roots.sort()[0];
     }
 
-    // Cycle detection (DFS with recursion‑stack coloring)
     const hasCycle = detectCycle(root, children, new Set(component));
 
     if (hasCycle) {
@@ -160,12 +122,8 @@ function processHierarchy(data) {
     }
   }
 
-  // Sort hierarchies deterministically by root
   hierarchies.sort((a, b) => a.root.localeCompare(b.root));
 
-  // ------------------------------------------------------------------
-  // 6. SUMMARY
-  // ------------------------------------------------------------------
   const validTrees = hierarchies.filter((h) => !h.has_cycle);
   const totalCycles = hierarchies.filter((h) => h.has_cycle).length;
 
@@ -195,14 +153,7 @@ function processHierarchy(data) {
   };
 }
 
-// ------------------------------------------------------------------
-// HELPERS
-// ------------------------------------------------------------------
 
-/**
- * DFS cycle detection using a 3‑color (white/gray/black) scheme.
- * Only considers nodes within `componentSet`.
- */
 function detectCycle(start, childrenMap, componentSet) {
   const WHITE = 0, GRAY = 1, BLACK = 2;
   const color = new Map();
@@ -226,8 +177,6 @@ function detectCycle(start, childrenMap, componentSet) {
     return false;
   }
 
-  // Start DFS from every unvisited node in the component
-  // (handles cases where root can't reach all nodes, e.g. pure cycles)
   for (const node of componentSet) {
     if (color.get(node) === WHITE) {
       if (dfs(node)) return true;
@@ -237,9 +186,6 @@ function detectCycle(start, childrenMap, componentSet) {
   return false;
 }
 
-/**
- * Recursively builds a nested‑object tree starting from `node`.
- */
 function buildTreeObj(node, childrenMap) {
   const kids = childrenMap.get(node) || [];
   const subtree = {};
@@ -251,10 +197,6 @@ function buildTreeObj(node, childrenMap) {
   return subtree;
 }
 
-/**
- * Returns the depth (number of nodes on the longest root‑to‑leaf path).
- * The input `tree` is a single‑key object like { A: { B: {}, C: {} } }.
- */
 function computeDepth(tree) {
   const rootKey = Object.keys(tree)[0];
   const childObj = tree[rootKey];

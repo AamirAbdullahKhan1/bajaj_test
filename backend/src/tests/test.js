@@ -1,7 +1,4 @@
-/**
- * Lightweight test runner — no external dependencies needed.
- * Run:  npm test
- */
+
 const { processHierarchy } = require("../services/processHierarchy");
 
 let passed = 0;
@@ -21,9 +18,6 @@ function deepEqual(a, b) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-// ------------------------------------------------------------------
-// TEST 1 — Full example from the challenge spec
-// ------------------------------------------------------------------
 console.log("\nTEST 1: Full example input");
 {
   const result = processHierarchy([
@@ -69,9 +63,7 @@ console.log("\nTEST 1: Full example input");
   assert(gTree && gTree.depth === 2, "G-tree depth = 2");
 }
 
-// ------------------------------------------------------------------
-// TEST 2 — Self‑loop is invalid
-// ------------------------------------------------------------------
+
 console.log("\nTEST 2: Self-loop");
 {
   const result = processHierarchy(["A->A"]);
@@ -82,9 +74,7 @@ console.log("\nTEST 2: Self-loop");
   assert(result.hierarchies.length === 0, "no hierarchies");
 }
 
-// ------------------------------------------------------------------
-// TEST 3 — Duplicate edges
-// ------------------------------------------------------------------
+
 console.log("\nTEST 3: Triple duplicates");
 {
   const result = processHierarchy(["A->B", "A->B", "A->B"]);
@@ -96,22 +86,15 @@ console.log("\nTEST 3: Triple duplicates");
   assert(result.hierarchies[0].depth === 2, "depth = 2");
 }
 
-// ------------------------------------------------------------------
-// TEST 4 — Multi-parent (diamond)
-// ------------------------------------------------------------------
+
 console.log("\nTEST 4: Multi-parent / diamond");
 {
   const result = processHierarchy(["A->D", "B->D"]);
   assert(result.invalid_entries.length === 0, "no invalid entries");
   assert(result.duplicate_edges.length === 0, "no duplicate edges");
-  // D's parent should be A (first wins). B->D silently discarded.
-  // Because B->D is discarded and B has no other edges, B is ignored completely.
   assert(result.summary.total_trees === 1, "one tree (A-D)");
 }
 
-// ------------------------------------------------------------------
-// TEST 5 — Empty input
-// ------------------------------------------------------------------
 console.log("\nTEST 5: Empty array");
 {
   const result = processHierarchy([]);
@@ -121,9 +104,7 @@ console.log("\nTEST 5: Empty array");
   assert(result.summary.largest_tree_root === "", "largest_tree_root empty");
 }
 
-// ------------------------------------------------------------------
-// TEST 6 — Only invalid entries
-// ------------------------------------------------------------------
+
 console.log("\nTEST 6: Only invalid entries");
 {
   const result = processHierarchy(["hello", "", "AB->C", "1->2"]);
@@ -131,9 +112,6 @@ console.log("\nTEST 6: Only invalid entries");
   assert(result.hierarchies.length === 0, "no hierarchies");
 }
 
-// ------------------------------------------------------------------
-// SUMMARY
-// ------------------------------------------------------------------
 console.log(`\n${"=".repeat(40)}`);
 console.log(`Results: ${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -4,15 +4,10 @@ const { USER_ID, EMAIL_ID, COLLEGE_ROLL_NUMBER } = require("../config");
 
 const router = express.Router();
 
-/**
- * POST /bfhl
- * Accepts { data: string[] } and returns the hierarchy analysis.
- */
 router.post("/", (req, res) => {
   try {
     const { data } = req.body;
 
-    // Input validation
     if (!data) {
       return res.status(400).json({
         error: true,

@@ -17,7 +17,6 @@ export default function InputSection({ onSubmit, isLoading }) {
   const handleSubmit = () => {
     if (!input.trim()) return;
 
-    // Split by comma or newline, trim whitespace, remove empty
     const rawItems = input.split(/,|\n/);
     const dataArray = rawItems
       .map(item => item.trim())
